@@ -78,6 +78,22 @@
 
 Открыть в браузере: http://localhost:5000/swagger
 
-Запуск backend
+Запуск backend из корня репозитория:
+
+```bash
 cd backend
+dotnet restore
 dotnet run
+```
+
+## Лабораторная работа 8. REST API заявок
+
+- `POST /api/cable-tickets` — создать заявку (ответ `201`).
+- `GET /api/cable-tickets` и `GET /api/cable-tickets/{id}` — список и одна заявка.
+- `PATCH /api/cable-tickets/{id}/assignee` — назначить электромонтёра.
+- `PATCH /api/cable-tickets/{id}/status` — изменить статус отдельно от назначения.
+- Коллекция запросов Postman: [docs/api-collection/cable-tickets.postman_collection.json](docs/api-collection/cable-tickets.postman_collection.json).
+
+Для ЛР8 API работает по адресу `http://localhost:5000`, Swagger — `http://localhost:5000/swagger`.
+Заявки хранятся в памяти процесса и исчезают после перезапуска.
+`GET /health` проверяет только, что процесс отвечает; он не проверяет создание заявки.

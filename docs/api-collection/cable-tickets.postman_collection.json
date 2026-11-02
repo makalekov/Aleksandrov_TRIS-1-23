@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "РИС — CableTickets API (ЛР8)",
+    "description": "REST API заявок на повреждение кабеля. Импортируйте коллекцию, запустите запросы по порядку. Базовый URL: http://localhost:5000.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "ticketId", "value": "1" },
+    { "key": "electricianId", "value": "2" }
+  ],
+  "item": [
+    {
+      "name": "01 POST create — 201",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));", "const ticket = pm.response.json();", "pm.test('server assigned id, number and New status', () => { pm.expect(ticket.id).to.be.a('number'); pm.expect(ticket.number).to.be.a('string'); pm.expect(ticket.status).to.eql('New'); });", "pm.collectionVariables.set('ticketId', ticket.id);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-User-Id", "value": "1" }],
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Обрыв кабеля на участке Москва-Замоскворечье\",\n  \"siteId\": 3,\n  \"description\": \"Повреждение магистрального кабеля, требуется выезд бригады\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/cable-tickets"
+      }
+    },
+    {
+      "name": "02 POST short title — 400",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('400 Bad Request', () => pm.response.to.have.status(400));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"abc\",\n  \"siteId\": 3,\n  \"description\": \"Повреждение магистрального кабеля, требуется выезд бригады\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/cable-tickets"
+      }
+    },
+    {
+      "name": "03 GET missing id — 404",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('404 Not Found', () => pm.response.to.have.status(404));"] } }],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/cable-tickets/999999" }
+    },
+    {
+      "name": "04 GET list — 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK and array response', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.be.an('array'); });"] } }],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/cable-tickets" }
+    },
+    {
+      "name": "05 PATCH status without assignee — 409",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('409 Conflict', () => pm.response.to.have.status(409));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-User-Id", "value": "{{electricianId}}" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"InProgress\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/cable-tickets/{{ticketId}}/status"
+      }
+    },
+    {
+      "name": "06 PATCH assign electrician — 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK and assignee saved', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().assigneeUserId).to.eql(Number(pm.collectionVariables.get('electricianId'))); });"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-User-Id", "value": "1" }],
+        "body": { "mode": "raw", "raw": "{\n  \"assigneeUserId\": {{electricianId}}\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/cable-tickets/{{ticketId}}/assignee"
+      }
+    },
+    {
+      "name": "07 PATCH status InProgress — 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK and status InProgress', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('InProgress'); });"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-User-Id", "value": "{{electricianId}}" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"InProgress\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/cable-tickets/{{ticketId}}/status"
+      }
+    },
+    {
+      "name": "08 PATCH status Closed — 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK and status Closed', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('Closed'); });"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-User-Id", "value": "{{electricianId}}" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"Closed\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/cable-tickets/{{ticketId}}/status"
+      }
+    }
+  ]
+}
