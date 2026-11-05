@@ -25,29 +25,32 @@ public class CableTicketsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<List<TicketResponse>> GetAll([FromQuery] int? assigneeUserId)
+    public async Task<ActionResult<List<TicketResponse>>> GetAll([FromQuery] int? assigneeUserId, CancellationToken cancellationToken)
     {
-        var tickets = _service.GetAll();
-        if (assigneeUserId.HasValue)
-            tickets = tickets.Where(t => t.AssigneeUserId == assigneeUserId.Value).ToList();
+        var tickets = await _service.GetAll(assigneeUserId, cancellationToken);
         return Ok(tickets.Select(MapToResponse).ToList());
     }
 
     [HttpGet("{id}")]
-    public ActionResult<TicketResponse> GetById(int id)
+    public async Task<ActionResult<TicketResponse>> GetById(int id, CancellationToken cancellationToken)
     {
-        var ticket = _service.GetById(id);
+        var ticket = await _service.GetById(id, cancellationToken);
         if (ticket == null) return Problem(statusCode: 404, title: "Заявка не найдена");
         return Ok(MapToResponse(ticket));
     }
 
     [HttpPost]
-    public ActionResult<TicketResponse> Create([FromBody] CreateTicketRequest request)
+    public async Task<ActionResult<TicketResponse>> Create([FromBody] CreateTicketRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var ticket = _service.Create(request, GetUserId());
+            var ticket = await _service.Create(request, GetUserId(), cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = ticket.Id }, MapToResponse(ticket));
+        }
+        catch (TicketNumberConflictException ex)
+        {
+            _logger.LogWarning("CreateTicket number conflict; siteId={SiteId}; error={ErrorType}", request.SiteId, ex.GetType().Name);
+            return Problem(statusCode: 409, title: "Не удалось сформировать уникальный номер заявки");
         }
         catch (Exception ex)
         {
@@ -60,17 +63,21 @@ public class CableTicketsController : ControllerBase
     }
 
     [HttpPatch("{id}/assignee")]
-    public ActionResult<TicketResponse> Assign(int id, [FromBody] AssignTicketRequest request)
+    public async Task<ActionResult<TicketResponse>> Assign(int id, [FromBody] AssignTicketRequest request, CancellationToken cancellationToken)
     {
-        var ticket = _service.Assign(id, request.AssigneeUserId);
-        if (ticket == null) return Problem(statusCode: 404, title: "Заявка не найдена");
+        var (ticket, error) = await _service.Assign(id, request.AssigneeUserId, cancellationToken);
+        if (ticket == null)
+        {
+            var statusCode = error == "Заявка не найдена" ? 404 : 409;
+            return Problem(statusCode: statusCode, title: error);
+        }
         return Ok(MapToResponse(ticket));
     }
 
     [HttpPatch("{id}/status")]
-    public ActionResult<TicketResponse> ChangeStatus(int id, [FromBody] ChangeStatusRequest request)
+    public async Task<ActionResult<TicketResponse>> ChangeStatus(int id, [FromBody] ChangeStatusRequest request, CancellationToken cancellationToken)
     {
-        var (ticket, error) = _service.ChangeStatus(id, request.Status, GetUserId());
+        var (ticket, error) = await _service.ChangeStatus(id, request.Status, GetUserId(), cancellationToken);
         if (ticket == null)
         {
             if (error == "Заявка не найдена") return Problem(statusCode: 404, title: error);

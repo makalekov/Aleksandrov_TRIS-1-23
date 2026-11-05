@@ -97,3 +97,39 @@ dotnet run
 Для ЛР8 API работает по адресу `http://localhost:5000`, Swagger — `http://localhost:5000/swagger`.
 Заявки хранятся в памяти процесса и исчезают после перезапуска.
 `GET /health` проверяет только, что процесс отвечает; он не проверяет создание заявки.
+
+## Лабораторная работа 9. PostgreSQL и SQL
+
+- Схема: [db/schema.sql](db/schema.sql).
+- Учебные строки: [db/seed.sql](db/seed.sql).
+- Фильтрация, сортировка, JOIN и GROUP BY: [db/queries.sql](db/queries.sql).
+
+Для локального запуска:
+
+```bash
+createdb course_tickets
+psql -d course_tickets -f db/schema.sql
+psql -d course_tickets -f db/seed.sql
+psql -d course_tickets -f db/queries.sql
+```
+
+Имя БД можно заменить. Пароль — тот, который задан при установке PostgreSQL.
+
+## Лабораторная работа 10. EF Core и PostgreSQL
+
+- `backend/Data/AppDbContext.cs` описывает схему приложения и её ограничения.
+- `backend/Migrations/` содержит начальную миграцию и снимок модели.
+- `backend/Models/` содержит заявки, участки и пользователей.
+
+Для запуска API задайте локально строку подключения:
+
+```bash
+cd backend
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=course_tickets;Username=ВАШ_ПОЛЬЗОВАТЕЛЬ;Password=ВАШ_ПАРОЛЬ"
+dotnet ef database update
+psql -d course_tickets -f ../db/seed.sql
+dotnet run
+```
+
+В репозиторий попадает только идентификатор хранилища User Secrets, учётные данные хранятся локально.

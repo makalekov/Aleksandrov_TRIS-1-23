@@ -10,4 +10,5 @@ public class Ticket
     public string Status { get; set; } = "New";
     public int? AssigneeUserId { get; set; } // null, пока не назначен
     public int CreatedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }

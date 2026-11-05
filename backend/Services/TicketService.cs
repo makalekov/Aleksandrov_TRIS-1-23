@@ -1,91 +1,89 @@
+using backend.Data;
 using backend.Dtos;
 using backend.Models;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace backend.Services;
 
-public class TicketService : ITicketService
+public class TicketService(AppDbContext db) : ITicketService
 {
-    private readonly List<Ticket> _tickets = new();
-    private readonly object _sync = new();
-    private int _nextId = 1;
-
-    public List<Ticket> GetAll()
+    public async Task<List<Ticket>> GetAll(int? assigneeUserId, CancellationToken cancellationToken)
     {
-        lock (_sync) return _tickets.Select(Clone).ToList();
+        var query = db.Tickets.AsNoTracking();
+        if (assigneeUserId.HasValue)
+            query = query.Where(ticket => ticket.AssigneeUserId == assigneeUserId.Value);
+        return await query.OrderBy(ticket => ticket.Id).ToListAsync(cancellationToken);
     }
 
-    public Ticket? GetById(int id)
+    public Task<Ticket?> GetById(int id, CancellationToken cancellationToken) =>
+        db.Tickets.AsNoTracking().FirstOrDefaultAsync(ticket => ticket.Id == id, cancellationToken);
+
+    public async Task<Ticket> Create(CreateTicketRequest request, int userId, CancellationToken cancellationToken)
     {
-        lock (_sync)
+        var maxId = await db.Tickets.Select(ticket => (int?)ticket.Id).MaxAsync(cancellationToken) ?? 0;
+        var ticket = new Ticket
         {
-            var ticket = _tickets.FirstOrDefault(t => t.Id == id);
-            return ticket is null ? null : Clone(ticket);
+            Number = $"КБ-{100 + maxId + 1}",
+            Title = request.Title.Trim(),
+            SiteId = request.SiteId,
+            Description = request.Description.Trim(),
+            Status = "New",
+            CreatedByUserId = userId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        db.Tickets.Add(ticket);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return ticket;
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            throw new TicketNumberConflictException("Не удалось сформировать уникальный номер заявки", exception);
         }
     }
 
-    public Ticket Create(CreateTicketRequest request, int userId)
+    public async Task<(Ticket? ticket, string? error)> Assign(int id, int assigneeUserId, CancellationToken cancellationToken)
     {
-        lock (_sync)
-        {
-            var id = _nextId++;
-            var ticket = new Ticket
-            {
-                Id = id,
-                Number = $"КБ-{100 + id}",
-                Title = request.Title.Trim(),
-                SiteId = request.SiteId,
-                Description = request.Description.Trim(),
-                Status = "New",
-                CreatedByUserId = userId
-            };
-            _tickets.Add(ticket);
-            return Clone(ticket);
-        }
+        var ticket = await db.Tickets.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (ticket is null) return (null, "Заявка не найдена");
+        if (ticket.Status != "New") return (null, "Назначить исполнителя можно только новой заявке");
+        ticket.AssigneeUserId = assigneeUserId;
+        await db.SaveChangesAsync(cancellationToken);
+        return (ticket, null);
     }
 
-    public Ticket? Assign(int id, int assigneeUserId)
+    public async Task<(Ticket? ticket, string? error)> ChangeStatus(int id, string newStatus, int userId, CancellationToken cancellationToken)
     {
-        lock (_sync)
+        var ticket = await db.Tickets.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (ticket is null) return (null, "Заявка не найдена");
+
+        if (newStatus == "InProgress")
         {
-            var ticket = _tickets.FirstOrDefault(t => t.Id == id);
-            if (ticket is null) return null;
-            ticket.AssigneeUserId = assigneeUserId;
-            return Clone(ticket);
+            if (ticket.Status != "New") return (null, "В работу можно взять только новую заявку");
+            if (ticket.AssigneeUserId is null) return (null, "Нельзя взять в работу без назначенного исполнителя");
+            if (ticket.AssigneeUserId != userId) return (null, "Вы не назначены на эту заявку");
         }
-    }
-
-    public (Ticket? ticket, string? error) ChangeStatus(int id, string newStatus, int userId)
-    {
-        lock (_sync)
+        else if (newStatus == "Closed")
         {
-            var ticket = _tickets.FirstOrDefault(t => t.Id == id);
-            if (ticket is null) return (null, "Заявка не найдена");
-
-            if (newStatus == "InProgress" && ticket.AssigneeUserId is null)
-                return (null, "Нельзя взять в работу без назначенного исполнителя");
-            if ((newStatus == "InProgress" || newStatus == "Closed") && ticket.AssigneeUserId != userId)
-                return (null, "Вы не назначены на эту заявку");
-            if (newStatus == "Closed" && ticket.Status != "InProgress")
-                return (null, "Закрыть можно только заявку в статусе InProgress");
-            if (newStatus == "Cancelled" && ticket.Status != "New")
-                return (null, "Отменить можно только новую заявку");
-            if (newStatus == "InProgress" && ticket.Status != "New")
-                return (null, "В работу можно взять только новую заявку");
-
-            ticket.Status = newStatus;
-            return (Clone(ticket), null);
+            if (ticket.Status != "InProgress") return (null, "Закрыть можно только заявку в статусе InProgress");
+            if (ticket.AssigneeUserId != userId) return (null, "Вы не назначены на эту заявку");
         }
-    }
+        else if (newStatus == "Cancelled")
+        {
+            if (ticket.Status != "New") return (null, "Отменить можно только новую заявку");
+        }
+        else
+        {
+            return (null, "Возврат заявки к статусу New запрещён");
+        }
 
-    private static Ticket Clone(Ticket ticket) => new()
-    {
-        Id = ticket.Id,
-        Number = ticket.Number,
-        Title = ticket.Title,
-        SiteId = ticket.SiteId,
-        Description = ticket.Description,
-        Status = ticket.Status,
-        AssigneeUserId = ticket.AssigneeUserId,
-        CreatedByUserId = ticket.CreatedByUserId
-    };
+        ticket.Status = newStatus;
+        await db.SaveChangesAsync(cancellationToken);
+        return (ticket, null);
+    }
 }
+
+public sealed class TicketNumberConflictException(string message, Exception innerException) : Exception(message, innerException);

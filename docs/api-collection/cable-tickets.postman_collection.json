@@ -41,6 +41,11 @@
       "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/cable-tickets" }
     },
     {
+      "name": "04b GET created ticket — 200",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK and requested ticket returned', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('ticketId'))); });"] } }],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/cable-tickets/{{ticketId}}" }
+    },
+    {
       "name": "05 PATCH status without assignee — 409",
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('409 Conflict', () => pm.response.to.have.status(409));"] } }],
       "request": {

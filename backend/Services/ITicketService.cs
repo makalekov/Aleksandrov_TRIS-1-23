@@ -5,9 +5,9 @@ namespace backend.Services;
 
 public interface ITicketService
 {
-    List<Ticket> GetAll();
-    Ticket? GetById(int id);
-    Ticket Create(CreateTicketRequest request, int userId);
-    Ticket? Assign(int id, int assigneeUserId);
-    (Ticket? ticket, string? error) ChangeStatus(int id, string newStatus, int userId);
+    Task<List<Ticket>> GetAll(int? assigneeUserId, CancellationToken cancellationToken);
+    Task<Ticket?> GetById(int id, CancellationToken cancellationToken);
+    Task<Ticket> Create(CreateTicketRequest request, int userId, CancellationToken cancellationToken);
+    Task<(Ticket? ticket, string? error)> Assign(int id, int assigneeUserId, CancellationToken cancellationToken);
+    Task<(Ticket? ticket, string? error)> ChangeStatus(int id, string newStatus, int userId, CancellationToken cancellationToken);
 }
