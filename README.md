@@ -88,6 +88,7 @@ dotnet run
 
 ## Лабораторная работа 8. REST API заявок
 
+- Отчёт по проверкам: [docs/reports/lab-08.md](docs/reports/lab-08.md).
 - `POST /api/cable-tickets` — создать заявку (ответ `201`).
 - `GET /api/cable-tickets` и `GET /api/cable-tickets/{id}` — список и одна заявка.
 - `PATCH /api/cable-tickets/{id}/assignee` — назначить электромонтёра.
@@ -100,6 +101,7 @@ dotnet run
 
 ## Лабораторная работа 9. PostgreSQL и SQL
 
+- Отчёт по схеме, SQL-запросам и проверкам PostgreSQL: [docs/reports/lab-09.md](docs/reports/lab-09.md).
 - Схема: [db/schema.sql](db/schema.sql).
 - Учебные строки: [db/seed.sql](db/seed.sql).
 - Фильтрация, сортировка, JOIN и GROUP BY: [db/queries.sql](db/queries.sql).
@@ -117,6 +119,7 @@ psql -d course_tickets -f db/queries.sql
 
 ## Лабораторная работа 10. EF Core и PostgreSQL
 
+- Отчёт по миграции и рестарт-тесту: [docs/reports/lab-10.md](docs/reports/lab-10.md).
 - `backend/Data/AppDbContext.cs` описывает схему приложения и её ограничения.
 - `backend/Migrations/` содержит начальную миграцию и снимок модели.
 - `backend/Models/` содержит заявки, участки и пользователей.

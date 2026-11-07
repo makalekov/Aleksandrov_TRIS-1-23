@@ -16,7 +16,7 @@
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-User-Id", "value": "1" }],
-        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Обрыв кабеля на участке Москва-Замоскворечье\",\n  \"siteId\": 3,\n  \"description\": \"Повреждение магистрального кабеля, требуется выезд бригады\"\n}", "options": { "raw": { "language": "json" } } },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Обрыв кабеля на участке Москва-Замоскворечье\",\n  \"siteId\": 1,\n  \"description\": \"Повреждение магистрального кабеля, требуется выезд бригады\"\n}", "options": { "raw": { "language": "json" } } },
         "url": "{{baseUrl}}/api/cable-tickets"
       }
     },
@@ -26,7 +26,7 @@
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"title\": \"abc\",\n  \"siteId\": 3,\n  \"description\": \"Повреждение магистрального кабеля, требуется выезд бригады\"\n}", "options": { "raw": { "language": "json" } } },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"abc\",\n  \"siteId\": 1,\n  \"description\": \"Повреждение магистрального кабеля, требуется выезд бригады\"\n}", "options": { "raw": { "language": "json" } } },
         "url": "{{baseUrl}}/api/cable-tickets"
       }
     },
